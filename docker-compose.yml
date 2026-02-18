@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RATE_LIMIT_THRESHOLD=${RATE_LIMIT_THRESHOLD}
+      - RATE_LIMIT_WINDOW_SECONDS=${RATE_LIMIT_WINDOW_SECONDS}
+      - EXTERNAL_SERVICE_FAILURE_RATE=${EXTERNAL_SERVICE_FAILURE_RATE}
+      - CIRCUIT_BREAKER_FAILURE_THRESHOLD=${CIRCUIT_BREAKER_FAILURE_THRESHOLD}
+      - CIRCUIT_BREAKER_RESET_TIMEOUT=${CIRCUIT_BREAKER_RESET_TIMEOUT}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
